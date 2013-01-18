@@ -2,10 +2,11 @@
 %define lowername handbrake
 %define version 0.9.8
 %define release 1
+%global git 03afd5d
 
 Name:           %{name}
 Version:        %{version}
-Release:        %{release}%{?dist}
+Release:        %{release}.git%{git}%{?dist}
 Summary:        A program to transcode DVDs and other sources to MPEG-4
 
 Group:          Applications/Multimedia
