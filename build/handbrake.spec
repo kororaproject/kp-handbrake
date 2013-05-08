@@ -2,7 +2,7 @@
 %define lowername handbrake
 %define version 0.9.8
 %define release 1
-%global git 03afd5d
+%global git 7b2805e
 
 Name:           %{name}
 Version:        %{version}
