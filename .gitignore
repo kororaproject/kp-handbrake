@@ -1,2 +1,4 @@
 upstream/
-handbrake*.tar.gz
+build/sources/*.tar.gz
+build/sources/*.tar.bz2
+build/sources/*.src.rpm
