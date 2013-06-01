@@ -1,12 +1,12 @@
 Name:           HandBrake
 Version:        0.9.9
-Release:        3%{?dist}
+Release:        4%{?dist}
 Summary:        An open-source multiplatform video transcoder
-Group:          Applications/Multimedia
 
 License:        GPLv2+
 URL:            http://handbrake.fr/
 Source0:        %{name}-%{version}.tar.bz2
+Patch0:         %{name}-f19-x264-fix.patch
 
 # The project fetches libraries to bundle in the executable at compile time; to
 # have them available before building, proceed as follows. All files will be
@@ -26,7 +26,7 @@ Source16:       libdvdread-svn1168.tar.gz
 Source17:       libmkv-0.6.5-0-g82075ae.tar.gz
 Source18:       mp4v2-trunk-r355.tar.bz2
 Source19:       mpeg2dec-0.5.1.tar.gz
-Source20:       x264-r2273-b3065e6.tar.gz
+Source20:       x264-r2282-1db4621.tar.gz
 
 BuildRequires:  bzip2-devel
 BuildRequires:  dbus-glib-devel
@@ -68,7 +68,6 @@ protection.
 Summary:        An open-source multiplatform video transcoder (GUI)
 Obsoletes:      HandBrake <= %{version}
 Provides:       HandBrake = %{version}-%{release}
-Group:    	Applications/Multimedia
 
 %description gui
 %{name} is a general-purpose, free, open-source, cross-platform, multithreaded
@@ -80,7 +79,6 @@ This package contains the main program with a graphical interface.
 
 %package cli
 Summary:        An open-source multiplatform video transcoder (CLI)
-Group:    	Applications/Multimedia
 
 %description cli
 %{name} is a general-purpose, free, open-source, cross-platform, multithreaded
@@ -92,6 +90,7 @@ This package contains the command line version of the program.
 
 %prep
 %setup -q
+%patch0 -p0
 mkdir -p download
 cp %{SOURCE10} %{SOURCE11} %{SOURCE12} %{SOURCE13} %{SOURCE14} %{SOURCE15} \
     %{SOURCE16} %{SOURCE17} %{SOURCE18} %{SOURCE19} %{SOURCE20} \
@@ -100,7 +99,7 @@ cp %{SOURCE10} %{SOURCE11} %{SOURCE12} %{SOURCE13} %{SOURCE14} %{SOURCE15} \
 %build
 # By default the project is built with optimizations for speed and no debug.
 # Override configure settings by passing RPM_OPT_FLAGS where needed.
-echo "GCC.args.O.speed = ${RPM_OPT_FLAGS}" > custom.defs
+#echo "GCC.args.O.speed = ${RPM_OPT_FLAGS}" > custom.defs
 echo "GCC.args.g.none = -g" >> custom.defs
 
 ./configure --prefix=%{_prefix} --verbose
@@ -141,6 +140,9 @@ gtk-update-icon-cache %{_datadir}/icons/hicolor &>/dev/null || :
 %{_bindir}/HandBrakeCLI
 
 %changelog
+* Thu May 30 2013 Simone Caronni <negativo17@gmail.com> - 0.9.9-4
+- Updated x264 to r2282-1db4621 (stable branch) to fix Fedora 19 crash issues.
+
 * Mon May 20 2013 Simone Caronni <negativo17@gmail.com> - 0.9.9-3
 - Update to 0.9.9.
 - Separate GUI and CLI packages.
