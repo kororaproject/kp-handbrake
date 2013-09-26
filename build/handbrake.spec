@@ -1,12 +1,14 @@
 Name:           HandBrake
 Version:        0.9.9
-Release:        4%{?dist}
+Release:        7%{?dist}
 Summary:        An open-source multiplatform video transcoder
 
 License:        GPLv2+
 URL:            http://handbrake.fr/
 Source0:        %{name}-%{version}.tar.bz2
 Patch0:         %{name}-f19-x264-fix.patch
+
+ExclusiveArch:  %{ix86} x86_64
 
 # The project fetches libraries to bundle in the executable at compile time; to
 # have them available before building, proceed as follows. All files will be
@@ -29,22 +31,15 @@ Source19:       mpeg2dec-0.5.1.tar.gz
 Source20:       x264-r2282-1db4621.tar.gz
 
 BuildRequires:  bzip2-devel
-BuildRequires:  dbus-glib-devel
-BuildRequires:  desktop-file-utils
 BuildRequires:  fontconfig-devel
 BuildRequires:  freetype-devel
 BuildRequires:  fribidi-devel
-BuildRequires:  gstreamer-devel
-BuildRequires:  gstreamer-plugins-base-devel
 BuildRequires:  intltool
 BuildRequires:  libass-devel
-BuildRequires:  libgudev1-devel
-BuildRequires:  libnotify-devel
 BuildRequires:  libogg-devel
 BuildRequires:  libsamplerate-devel
 BuildRequires:  libtheora-devel
 BuildRequires:  libtool
-BuildRequires:  libvorbis-devel
 BuildRequires:  libxml2-devel
 BuildRequires:  m4
 BuildRequires:  make
@@ -52,11 +47,23 @@ BuildRequires:  patch
 BuildRequires:  python
 BuildRequires:  subversion
 BuildRequires:  tar
-BuildRequires:  webkitgtk-devel
 BuildRequires:  wget
 BuildRequires:  yasm
 BuildRequires:  zlib-devel
-Requires:       hicolor-icon-theme
+BuildRequires:  libvorbis-devel
+
+# No gui on RHEL 6, GTK libraries too old.
+%if 0%{?fedora} || 0%{?rhel} > 6
+
+BuildRequires:  dbus-glib-devel
+BuildRequires:  desktop-file-utils
+BuildRequires:  gstreamer-devel
+BuildRequires:  gstreamer-plugins-base-devel
+BuildRequires:  libgudev1-devel
+BuildRequires:  libnotify-devel
+BuildRequires:  webkitgtk-devel
+
+%endif
 
 %description
 %{name} is a general-purpose, free, open-source, cross-platform, multithreaded
@@ -64,10 +71,14 @@ video transcoder software application. It can process most common multimedia
 files and any DVD or Bluray sources that do not contain any kind of copy
 protection.
 
+%if 0%{?fedora} || 0%{?rhel} > 6
+
 %package gui
 Summary:        An open-source multiplatform video transcoder (GUI)
 Obsoletes:      HandBrake <= %{version}
 Provides:       HandBrake = %{version}-%{release}
+Requires:       hicolor-icon-theme
+Requires:       libdvdcss%{_isa}
 
 %description gui
 %{name} is a general-purpose, free, open-source, cross-platform, multithreaded
@@ -77,8 +88,11 @@ protection.
 
 This package contains the main program with a graphical interface.
 
+%endif
+
 %package cli
 Summary:        An open-source multiplatform video transcoder (CLI)
+Requires:       libdvdcss%{_isa}
 
 %description cli
 %{name} is a general-purpose, free, open-source, cross-platform, multithreaded
@@ -102,12 +116,19 @@ cp %{SOURCE10} %{SOURCE11} %{SOURCE12} %{SOURCE13} %{SOURCE14} %{SOURCE15} \
 #echo "GCC.args.O.speed = ${RPM_OPT_FLAGS}" > custom.defs
 echo "GCC.args.g.none = -g" >> custom.defs
 
-./configure --prefix=%{_prefix} --verbose
+./configure --prefix=%{_prefix} --verbose --disable-gtk-update-checks \
+%if 0%{?rhel} == 6
+    --disable-gtk
+%endif
+
 make -C build %{?_smp_mflags} 
 
 %install
 rm -rf %{buildroot}
 make -C build DESTDIR=%{buildroot} install
+
+%if 0%{?fedora} || 0%{?rhel} > 6
+
 desktop-file-validate %{buildroot}/%{_datadir}/applications/ghb.desktop
 
 %post
@@ -135,11 +156,23 @@ gtk-update-icon-cache %{_datadir}/icons/hicolor &>/dev/null || :
 %{_datadir}/icons/hicolor/128x128/apps/hb-icon.png
 %{_datadir}/icons/hicolor/256x256/apps/hb-icon.png
 
+%endif
+
 %files cli
 %doc AUTHORS COPYING CREDITS NEWS THANKS TRANSLATIONS
 %{_bindir}/HandBrakeCLI
 
 %changelog
+* Mon Sep 09 2013 Simone Caronni <negativo17@gmail.com> - 0.9.9-7
+- Add requirement on libdvdcss, fix hicolor-icon-theme requirement.
+
+* Fri Jul 26 2013 Simone Caronni <negativo17@gmail.com> - 0.9.9-6
+- Enable building CLI only on CentOS/RHEL 6.
+- Disable GTK update checks (updates come only packaged).
+
+* Tue Jul 23 2013 Simone Caronni <negativo17@gmail.com> - 0.9.9-5
+- Enable command line interface only for CentOS/RHEL 6.
+
 * Thu May 30 2013 Simone Caronni <negativo17@gmail.com> - 0.9.9-4
 - Updated x264 to r2282-1db4621 (stable branch) to fix Fedora 19 crash issues.
 
