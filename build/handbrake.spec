@@ -1,16 +1,14 @@
-Name:           HandBrake
-Version:        0.9.9
-Release:        12%{?dist}
-Summary:        An open-source multiplatform video transcoder
+# Define for snapshot builds
+# global commit 6507
 
+Name:           HandBrake
+Version:        0.10.0
+Release:        11%{?commit:.svn%{commit}}%{?dist}
+Summary:        An open-source multiplatform video transcoder
 License:        GPLv2+
 URL:            http://handbrake.fr/
-Source0:        http://downloads.sourceforge.net/%{name}/%{name}-%{version}.tar.bz2
-Patch1:         %{name}-%{version}-use-unpatched-a52.patch
-Patch2:         %{name}-%{version}-use-unpatched-libmkv.patch
-Patch3:         %{name}-%{version}-use-gstreamer1.patch
 
-ExclusiveArch:  %{ix86} x86_64
+Source0:        http://downloads.sourceforge.net/%{name}/%{name}-%{version}%{?commit:-svn%{commit}}.tar.bz2
 
 # The project fetches libraries to bundle in the executable at compile time; to
 # have them available before building, proceed as follows. All files will be
@@ -20,32 +18,36 @@ ExclusiveArch:  %{ix86} x86_64
 # cd build
 # make contrib.fetch
 
-Source11:       http://download.handbrake.fr/handbrake/contrib/faac-1.28.tar.gz
-Source12:       http://download.handbrake.fr/handbrake/contrib/fdk-aac-v0.1.1-6-gbae4553.tar.bz2
-Source13:       http://download.handbrake.fr/handbrake/contrib/mp4v2-trunk-r355.tar.bz2
-Source14:       http://download.handbrake.fr/handbrake/contrib/libav-v9.6.tar.bz2
+Source10:       http://download.handbrake.fr/contrib/libav-v10.1.tar.bz2
+Source11:       http://download.handbrake.fr/contrib/fdk-aac-v0.1.1-6-gbae4553.tar.bz2
+Source12:       http://download.handbrake.fr/contrib/x265-8768-5e604833c5aa-1.4.tar.bz2
 
 BuildRequires:  a52dec-devel >= 0.7.4
+BuildRequires:  cmake
 BuildRequires:  bzip2-devel
-#BuildRequires:  faac-devel >= 1.28
+BuildRequires:  dbus-glib-devel
+BuildRequires:  desktop-file-utils
 BuildRequires:  fontconfig-devel
 BuildRequires:  freetype-devel
 BuildRequires:  fribidi-devel
+BuildRequires:  gstreamer1-devel
+BuildRequires:  gstreamer1-plugins-base-devel
 BuildRequires:  intltool
 BuildRequires:  lame-devel >= 3.98
+BuildRequires:  libappindicator-gtk3-devel
 BuildRequires:  libass-devel
-BuildRequires:  libbluray-devel
-#>= 0.2.3
-BuildRequires:  libdvdnav-devel
-BuildRequires:  libdvdread-devel
-BuildRequires:  libmkv-devel >= 0.6.5
-#BuildRequires:  libmp4v2-devel >= 1.9.0
+BuildRequires:  libbluray-devel >= 0.2.3
+BuildRequires:  libdvdnav-devel >= 5.0.1
+BuildRequires:  libdvdread-devel >= 5.0.0
+BuildRequires:  libgudev1-devel
 BuildRequires:  libmpeg2-devel >= 0.5.1
+BuildRequires:  libnotify-devel
 BuildRequires:  libogg-devel
 BuildRequires:  libsamplerate-devel
 BuildRequires:  libtheora-devel
 BuildRequires:  libtool
 BuildRequires:  libvorbis-devel
+BuildRequires:  libvpx-devel
 BuildRequires:  libxml2-devel
 BuildRequires:  m4
 BuildRequires:  make
@@ -53,37 +55,18 @@ BuildRequires:  patch
 BuildRequires:  python
 BuildRequires:  subversion
 BuildRequires:  tar
+BuildRequires:  webkitgtk3-devel
 BuildRequires:  wget
 BuildRequires:  x264-devel
 BuildRequires:  yasm
 BuildRequires:  zlib-devel
-
-# ffmpeg 2.0 only on Fedora 20+
-%if 0%{?fedora} > 19 || 0%{?rhel} > 6
-BuildRequires:  ffmpeg-devel >= 2.0
-%endif
-
-# No gui on RHEL 6, GTK libraries too old. 
-%if 0%{?fedora} || 0%{?rhel} > 6
-
-BuildRequires:  dbus-glib-devel
-BuildRequires:  desktop-file-utils
-BuildRequires:  gstreamer1-devel
-BuildRequires:  gstreamer1-plugins-base-devel
-BuildRequires:  libgudev1-devel
-BuildRequires:  libnotify-devel
-BuildRequires:  webkitgtk3-devel
 Requires:       hicolor-icon-theme
-
-%endif
 
 %description
 %{name} is a general-purpose, free, open-source, cross-platform, multithreaded
 video transcoder software application. It can process most common multimedia
 files and any DVD or Bluray sources that do not contain any kind of copy
 protection.
-
-%if 0%{?fedora} || 0%{?rhel} > 6
 
 %package gui
 Summary:        An open-source multiplatform video transcoder (GUI)
@@ -100,8 +83,6 @@ protection.
 
 This package contains the main program with a graphical interface.
 
-%endif
-
 %package cli
 Summary:        An open-source multiplatform video transcoder (CLI)
 Requires:       libdvdcss%{_isa}
@@ -116,57 +97,39 @@ This package contains the command line version of the program.
 
 %prep
 %setup -q
-%patch1 -p1
-%patch2 -p1
-%patch3 -p1
 
 mkdir -p download
-cp %{SOURCE11} %{SOURCE12} %{SOURCE13} %{SOURCE14} download
+cp %{SOURCE10} %{SOURCE11} %{SOURCE12} download
 
 # Use system libraries in place of bundled ones
-for module in a52dec lame libdvdnav libdvdread libbluray libmkv mpeg2dec x264; do
+for module in a52dec libdvdnav libdvdread libbluray libvpx; do
     sed -i -e "/MODULES += contrib\/$module/d" make/include/main.defs
 done
-
-%if 0%{?fedora} > 19 || 0%{?rhel} > 6
-sed -i -e "/MODULES += contrib\/ffmpeg/d" make/include/main.defs
-%endif
 
 %build
 # This makes build stop if any download is attempted
 export http_proxy=http://127.0.0.1
 
-# Disable Fedora 21 GCC error as it breaks mp4v build.
-%if 0%{?fedora} >= 21
-export RPM_OPT_FLAGS="${RPM_OPT_FLAGS} -Wno-error=format-security"
-%endif
-
 # By default the project is built with optimizations for speed and no debug.
 # Override configure settings by passing RPM_OPT_FLAGS and disabling preset
 # debug options.
-echo "GCC.args.O.speed = ${RPM_OPT_FLAGS} -I%{_includedir}/ffmpeg" > custom.defs
+echo "GCC.args.O.speed = ${RPM_OPT_FLAGS}" > custom.defs
 echo "GCC.args.g.none = " >> custom.defs
 
 # Not an autotools configure script.
+# Flags for qsv (Intel QuickSync) and hwd (DXVA) are Windows only.
 ./configure \
+    --build build \
     --prefix=%{_prefix} \
     --verbose \
-    --disable-gtk-update-checks \
-    --enable-fdk-aac \
-    --build build \
-%if 0%{?rhel} == 6
-    --disable-gtk
-%endif
+    --disable-gtk-update-checks
 
 make -C build %{?_smp_mflags}
 
 %install
-rm -rf %{buildroot}
-make -C build DESTDIR=%{buildroot} install
-
-%if 0%{?fedora} || 0%{?rhel} > 6
-
+%make_install -C build
 desktop-file-validate %{buildroot}/%{_datadir}/applications/ghb.desktop
+%find_lang ghb
 
 %post gui
 touch --no-create %{_datadir}/icons/hicolor &>/dev/null || :
@@ -182,31 +145,77 @@ fi
 %posttrans gui
 gtk-update-icon-cache %{_datadir}/icons/hicolor &>/dev/null || :
 
-%files gui
+%files -f ghb.lang gui
 %doc AUTHORS COPYING CREDITS NEWS THANKS TRANSLATIONS
 %{_bindir}/ghb
 %{_datadir}/applications/ghb.desktop
-%{_datadir}/icons/hicolor/16x16/apps/hb-icon.png
-%{_datadir}/icons/hicolor/22x22/apps/hb-icon.png
-%{_datadir}/icons/hicolor/24x24/apps/hb-icon.png
-%{_datadir}/icons/hicolor/32x32/apps/hb-icon.png
-%{_datadir}/icons/hicolor/48x48/apps/hb-icon.png
-%{_datadir}/icons/hicolor/64x64/apps/hb-icon.png
-%{_datadir}/icons/hicolor/128x128/apps/hb-icon.png
-%{_datadir}/icons/hicolor/256x256/apps/hb-icon.png
-
-%endif
+%{_datadir}/icons/hicolor/scalable/apps/hb-icon.svg
 
 %files cli
 %doc AUTHORS COPYING CREDITS NEWS THANKS TRANSLATIONS
 %{_bindir}/HandBrakeCLI
 
 %changelog
+* Wed Nov 26 2014 Simone Caronni <negativo17@gmail.com> - 0.10.0-11
+- Update to 0.10.0 official release.
+
+* Wed Nov 05 2014 Simone Caronni <negativo17@gmail.com> - 0.10-10.svn6507
+- Update to SVN revision 6507.
+
+* Mon Nov 03 2014 Simone Caronni <negativo17@gmail.com> - 0.10-9.svn6502
+- Update to SVN revision 6502.
+
+* Fri Oct 24 2014 Simone Caronni <negativo17@gmail.com> - 0.10-8.svn6461
+- Update to SVN revision 6461.
+
+* Fri Oct 10 2014 Simone Caronni <negativo17@gmail.com> - 0.10-7.svn6439
+- Update to SVN revision 6439.
+
+* Fri Oct 03 2014 Simone Caronni <negativo17@gmail.com> - 0.10-6.svn6422
+- Update to SVN revision 6430.
+
+* Sun Sep 28 2014 Simone Caronni <negativo17@gmail.com> - 0.10-5.svn6422
+- Update to SVN revision 6422.
+
+* Mon Sep 08 2014 Simone Caronni <negativo17@gmail.com> - 0.10-4.svn6404
+- Update to SVN revision 6404.
+- Update libdvdread and libdvdnav requirements.
+
+* Mon Sep 08 2014 Simone Caronni <negativo17@gmail.com> - 0.10-3.svn6394
+- Update to SVN revision 6394.
+
+* Mon Sep 01 2014 Simone Caronni <negativo17@gmail.com> - 0.10-2.svn6386
+- Update to svn revision 6386; new x265 presets.
+- Update x265 libraries.
+
+* Sat Aug 23 2014 Simone Caronni <negativo17@gmail.com> - 0.9.9-17.svn6304
+- Update to svn revision 6351. HandBrake version is now 0.10:
+  https://trac.handbrake.fr/milestone/HandBrake%200.10
+- Lame and x264 libraries are now linked by default.
+- Remove mkv, mpeg2dec and libmkv as they are no longer used.
+- LibAV is now enabled by default.
+- Add libappindicator-gtk3 build requirement.
+
+* Sun Aug 17 2014 Simone Caronni <negativo17@gmail.com> - 0.9.9-16.svn6304
+- Update to 6304 snapshot.
+
+* Wed Aug 06 2014 Simone Caronni <negativo17@gmail.com> - 0.9.9-15.svn6268
+- Update to latest snapshot.
+
+* Wed Jul 30 2014 Simone Caronni <negativo17@gmail.com> - 0.9.9-14.svn6244
+- Updated to latest snapshot.
+- Enable avformat muxer, replaces libmkv and mp4v2 support.
+- Requires libdvdnav >= 5.0.0 to fix crashes.
+- Remove ExclusiveArch.
+
+* Sat Jul 05 2014 Simone Caronni <negativo17@gmail.com> - 0.9.9-13.svn6227
+- Updated to SVN snapshot.
+- Remove RHEL 6 conditionals.
+
 * Tue Mar 25 2014 Simone Caronni <negativo17@gmail.com> - 0.9.9-12
-- Remove libdvdnav patch from the build and use libdvdnav with a patch from
-  trunk.
-- Use system ffpmeg 2 libraries in place of bundled libav for Fedora 20+.
-- Use GTK3 interface.
+- Backport DVD changes from trunk (should fix libdvdnav crashes with specific
+  DVD titles).
+- Use system ffpmeg 2 libraries in place of bundled libav.
 
 * Mon Mar 17 2014 Simone Caronni <negativo17@gmail.com> - 0.9.9-11
 - Fix crash on Fedora.
